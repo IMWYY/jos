@@ -11,6 +11,7 @@
 #include <kern/monitor.h>
 #include <kern/kdebug.h>
 #include <kern/trap.h>
+#include <kern/pmap.h>
 
 #define CMDBUF_SIZE	80	// enough for one VGA text line
 
@@ -26,6 +27,7 @@ static struct Command commands[] = {
 	{ "help", "Display this list of commands", mon_help },
 	{ "kerninfo", "Display information about the kernel", mon_kerninfo },
 	{ "backtrace", "Display the trace infomation", mon_backtrace},
+	{ "showmapping", "Displace the mapping of given virtual addressr", show_mapping},
 };
 
 /***** Implementations of basic kernel monitor commands *****/
@@ -83,6 +85,52 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 		
 		cf = (struct c_frame *)cf->caller_ebp;
 	}
+	return 0;
+}
+
+uint32_t 
+xtoi(char* buf) 
+{
+	uint32_t res = 0;
+	buf += 2; 
+	while (*buf) { 
+		if (*buf >= 'a') *buf = *buf-'a'+'0'+10;
+		res = res*16 + *buf - '0';
+		++buf;
+	}
+	return res;
+}
+
+int
+show_mapping(int argc, char **argv, struct Trapframe *tf)
+{
+	if (argc != 3) {
+		cprintf("show mapping usage: showmapping va1 va2.\n");
+		return 0;
+	}
+	uintptr_t start_va = xtoi(argv[1]), end_va = xtoi(argv[2]);
+	assert(start_va < end_va);
+	assert(end_va <= 0xffffffff);
+	cprintf("virtual address begin: %x, end: %x \n", start_va, end_va);
+
+	size_t cnt = 0;
+	for (size_t va = start_va; va <= end_va && va >= start_va; va += PGSIZE) {
+		cnt ++;
+		if (cnt == 20) {
+			cprintf("Too large range. show the first 20 entries. \n");
+			break;
+		}
+		pte_t *pt = pgdir_walk(kern_pgdir, (void*)va, 0);
+		if (!pt) {
+			cprintf("va:%x no mapping to pa. \n", va);
+		} else {
+			physaddr_t pa = PTE_ADDR(*pt);
+			uint32_t p = pa & PTE_P, w = pa & PTE_W, u = pa & PTE_U;
+			cprintf("va:%x map to pa:%x. PET_P:%d, PET_W:%d, PET_U:%d \n", 
+				va, pa, p, w, u);
+		}
+	}
+
 	return 0;
 }
 
