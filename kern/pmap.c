@@ -159,6 +159,9 @@ mem_init(void)
 	//////////////////////////////////////////////////////////////////////
 	// Make 'envs' point to an array of size 'NENV' of 'struct Env'.
 	// LAB 3: Your code here.
+	size_t env_len = sizeof(struct Env);
+	envs = (struct Env *)boot_alloc(NENV * env_len);
+	memset(envs, 0, NENV * env_len);
 
 	//////////////////////////////////////////////////////////////////////
 	// Now that we've allocated the initial kernel data structures, we set
@@ -189,7 +192,7 @@ mem_init(void)
 	// Permissions:
 	//    - the new image at UENVS  -- kernel R, user R
 	//    - envs itself -- kernel RW, user NONE
-	// LAB 3: Your code here.
+	boot_map_region(kern_pgdir, UENVS, PTSIZE, PADDR(envs), PTE_U);
 
 	//////////////////////////////////////////////////////////////////////
 	// Use the physical memory that 'bootstack' refers to as the kernel
@@ -215,6 +218,8 @@ mem_init(void)
 	// Check that the initial page directory has been set up correctly.
 	check_kern_pgdir();
 
+	// TODO: why not directly map [0, 4MB) to the target virtual space?
+	// TODO: seems that we don't need to map [0, 4MB) to KERNBASE?
 	// Switch from the minimal entry page directory to the full kern_pgdir
 	// page table we just created.	Our instruction pointer should be
 	// somewhere between KERNBASE and KERNBASE+4MB right now, which is
