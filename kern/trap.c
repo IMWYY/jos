@@ -64,7 +64,6 @@ trap_init(void)
 {
 	extern struct Segdesc gdt[];
 
-	// LAB 3: Your code here.
 	void t_divide();
 	void t_debug();
 	void t_nmi();
@@ -182,7 +181,20 @@ static void
 trap_dispatch(struct Trapframe *tf)
 {
 	// Handle processor exceptions.
-	// LAB 3: Your code here.
+	if (tf->tf_trapno == T_BRKPT) {
+		monitor(tf);
+		return;
+	} else if (tf->tf_trapno == T_PGFLT) {
+		page_fault_handler(tf);
+		return;
+	} else if (tf->tf_trapno == T_SYSCALL) {
+		// %eax, %edx, %ecx, %ebx, %edi, and %esi
+		tf->tf_regs.reg_eax = 
+			syscall(tf->tf_regs.reg_eax, tf->tf_regs.reg_edx,
+				tf->tf_regs.reg_ecx, tf->tf_regs.reg_ebx,
+				tf->tf_regs.reg_edi, tf->tf_regs.reg_esi);
+		return;
+	}
 
 	// Unexpected trap: The user process or the kernel has a bug.
 	print_trapframe(tf);
@@ -242,11 +254,14 @@ page_fault_handler(struct Trapframe *tf)
 	fault_va = rcr2();
 
 	// Handle kernel-mode page faults.
-
-	// LAB 3: Your code here.
+	if ((tf->tf_cs & 3) == 0) {
+		panic("page_fault_handler: kernel page fault.");
+	}
 
 	// We've already handled kernel-mode exceptions, so if we get here,
 	// the page fault happened in user mode.
+	// struct PageInfo *pp = page_alloc(ALLOC_ZERO);
+	// page_insert(curenv->env_pgdir, pp, (void *)fault_va, PTE_U | PTE_W);
 
 	// Destroy the environment that caused the fault.
 	cprintf("[%08x] user fault va %08x ip %08x\n",

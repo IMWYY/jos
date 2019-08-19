@@ -351,9 +351,15 @@ load_icode(struct Env *e, uint8_t *binary)
 	for (; ph < eph; ph++) {
 		assert(ph->p_filesz <= ph->p_memsz);
 		if (ph->p_type == ELF_PROG_LOAD) {
+			// cprintf("ph->p_va: 0x%08x, p_va+p_memsz: 0x%08x, p_va+p_filesz: 0x%08x \n", 
+			// 	ph->p_va, ph->p_va + ph->p_memsz, ph->p_va + ph->p_filesz);
 			region_alloc(e, (void *)ph->p_va, ph->p_memsz);
 			memset((void *)ph->p_va, 0, ph->p_memsz);
-			memcpy((void *)ph->p_va, binary + ph->p_offset, ph->p_memsz);
+			memcpy((void *)ph->p_va, binary + ph->p_offset, ph->p_filesz);
+			// if (ph->p_va == 0x00802000) {
+			// 	uint32_t *p = (void *)ph->p_va + 0x40;
+			// 	cprintf("mem_at_0x%08x: %08x\n", p, *p);
+			// }
 		}
 	}
 

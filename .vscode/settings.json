@@ -1,5 +1,8 @@
 {
     "files.associations": {
-        "ratio": "cpp"
+        "ratio": "cpp",
+        "monitor.h": "c",
+        "console.h": "c",
+        "error.h": "c"
     }
 }
