@@ -163,6 +163,18 @@ typedef uint32_t pde_t;
  */
 extern volatile pte_t uvpt[];     // VA of "virtual page table"
 extern volatile pde_t uvpd[];     // VA of current page directory
+
+/* 
+ *NOTE: the layout in [UVPT, UVPT + PTSIZE) is like this:
+ *
+ * ULIM, MMIOBASE -->  +------------------------------+ 0xef800000
+ *                     | Page Dir(1023)  Page Table   | R-/R-  PGSIZE
+ *                     | Page Dir(1022)  Page Table   | R-/R-  PGSIZE
+ *                     |  			     .......      | 
+ *                     | Page Dir(1)     Page Table   | R-/R-  PGSIZE
+ *                     | Page Dir(0) 	 Page Table   | R-/R-  PGSIZE
+ *    UVPT      ---->  +------------------------------+ 0xef400000
+ */
 #endif
 
 /*
