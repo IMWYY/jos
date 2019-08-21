@@ -267,8 +267,14 @@ mem_init_mp(void)
 	//             Known as a "guard page".
 	//     Permissions: kernel RW, user NONE
 	//
-	// LAB 4: Your code here:
-
+	for (size_t c_i = 0; c_i < NCPU; c_i++)
+	{
+		boot_map_region(kern_pgdir,
+			KSTACKTOP - KSTKSIZE - c_i * (KSTKSIZE + KSTKGAP), 
+			KSTKSIZE, 
+			PADDR(percpu_kstacks[c_i]), 
+			PTE_W);
+	}
 }
 
 // --------------------------------------------------------------
@@ -286,10 +292,6 @@ mem_init_mp(void)
 void
 page_init(void)
 {
-	// LAB 4:
-	// Change your code to mark the physical page at MPENTRY_PADDR
-	// as in use
-
 	// The example code here marks all physical pages as free.
 	// However this is not truly the case.  What memory is free?
 	//  1) Mark physical page 0 as in use.
@@ -307,14 +309,20 @@ page_init(void)
 	// Change the code to reflect this.
 	// NB: DO NOT actually touch the physical memory corresponding to
 	// free pages!
-	size_t io_page_start = (size_t)IOPHYSMEM / PGSIZE;
+
+	// Change your code to mark the physical page at MPENTRY_PADDR
+	// as in use
+
+	size_t io_page_start = (size_t) IOPHYSMEM / PGSIZE;
 	size_t cur_in_use_idx = (size_t) PADDR(boot_alloc(0)) / PGSIZE;
+	size_t mpentry_idx = (size_t) MPENTRY_PADDR / PGSIZE;
 	assert(io_page_start < npages);
 	assert(cur_in_use_idx < npages);
 
 	for (size_t i = 0; i < npages; i++) {
 		// physical memory from IOPHYSMEM to cur_in_use_idx 
-		if (i == 0 || (i >= io_page_start && i < cur_in_use_idx)) {
+		if (i == 0 || i == mpentry_idx ||
+			(i >= io_page_start && i < cur_in_use_idx)) {
 			pages[i].pp_ref = 1;
 			pages[i].pp_link = NULL;
 		} else {
@@ -576,8 +584,14 @@ mmio_map_region(physaddr_t pa, size_t size)
 	//
 	// Hint: The staff solution uses boot_map_region.
 	//
-	// Your code here:
-	panic("mmio_map_region not implemented");
+	pa = ROUNDDOWN(pa, PGSIZE);
+	size = ROUNDUP(size, PGSIZE);
+	if (base + size > MMIOLIM) {
+		panic("mmio_map_region: out of MMIOLIM");
+	}
+	boot_map_region(kern_pgdir, base, size, pa, PTE_PCD | PTE_PWT | PTE_W);
+	base += size;
+	return (void *) (base - size);
 }
 
 static uintptr_t user_mem_check_addr;

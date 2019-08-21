@@ -3,6 +3,7 @@
         "ratio": "cpp",
         "monitor.h": "c",
         "console.h": "c",
-        "error.h": "c"
+        "error.h": "c",
+        "lib.h": "c"
     }
 }
