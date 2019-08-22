@@ -90,8 +90,12 @@ openfile_lookup(envid_t envid, uint32_t fileid, struct OpenFile **po)
 	struct OpenFile *o;
 
 	o = &opentab[fileid % MAXOPEN];
-	if (pageref(o->o_fd) <= 1 || o->o_fileid != fileid)
+	if (pageref(o->o_fd) <= 1 || o->o_fileid != fileid) {
+		if (debug)
+			cprintf("openfile_lookup: fucked. ref=%d, id1=%d, id2=%d \n", 
+				pageref(o->o_fd), o->o_fileid, fileid);
 		return -E_INVAL;
+	}
 	*po = o;
 	return 0;
 }
@@ -213,8 +217,16 @@ serve_read(envid_t envid, union Fsipc *ipc)
 	if (debug)
 		cprintf("serve_read %08x %08x %08x\n", envid, req->req_fileid, req->req_n);
 
-	// Lab 5: Your code here:
-	return 0;
+	int r;
+	struct OpenFile *o;
+	if ((r = openfile_lookup(envid, req->req_fileid, &o)) < 0)
+		return r;
+	
+	ssize_t cnt = file_read(o->o_file, ret->ret_buf, req->req_n, o->o_fd->fd_offset);
+	if (cnt < 0) return cnt;
+	o->o_fd->fd_offset += cnt;
+
+	return cnt;
 }
 
 
@@ -227,9 +239,19 @@ serve_write(envid_t envid, struct Fsreq_write *req)
 {
 	if (debug)
 		cprintf("serve_write %08x %08x %08x\n", envid, req->req_fileid, req->req_n);
+	
+	int r;
+	struct OpenFile *o;
+	if ((r = openfile_lookup(envid, req->req_fileid, &o)) < 0)
+		return r;
 
-	// LAB 5: Your code here.
-	panic("serve_write not implemented");
+	if (debug)
+		cprintf("serve_write. got OpenFile id=%d \n", o->o_fileid);
+	
+	r = file_write(o->o_file, req->req_buf, req->req_n, o->o_fd->fd_offset);
+	if (r < 0) return r;
+	o->o_fd->fd_offset += r;
+	return r;
 }
 
 // Stat ipc->stat.req_fileid.  Return the file's struct Stat to the

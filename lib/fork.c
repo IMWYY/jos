@@ -66,7 +66,11 @@ static int
 duppage(envid_t envid, unsigned pn)
 {
 	void *addr = (void *)(pn * PGSIZE);
-	if ((uvpt[pn] & PTE_W) || (uvpt[pn] & PTE_COW)) {
+	if (uvpt[pn] & PTE_SHARE){
+		if (sys_page_map(0, addr, envid, addr, uvpt[pn] & PTE_SYSCALL)) {
+			panic("duppage: sys_page_map 0 fail.");
+		}
+	} else if ((uvpt[pn] & PTE_W) || (uvpt[pn] & PTE_COW)) {
 		if (sys_page_map(0, addr, envid, addr, PTE_U | PTE_P | PTE_COW)) {
 			panic("duppage: sys_page_map 1 fail.");
 		}
