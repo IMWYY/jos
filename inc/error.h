@@ -26,6 +26,9 @@ enum {
 	E_NOT_EXEC	,	// File not a valid executable
 	E_NOT_SUPP	,	// Operation not supported
 
+	E_TRANSMIT_RETRY,  // net send retry
+	E_RECEIVE_RETRY,
+
 	MAXERROR
 };
 

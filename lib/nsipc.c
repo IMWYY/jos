@@ -16,6 +16,8 @@ union Nsipc nsipcbuf __attribute__((aligned(PGSIZE)));
 static int
 nsipc(unsigned type)
 {
+    cprintf("nsipc nsipcbuf %08x, &buf %08x, &len %08x \n", &nsipcbuf, nsipcbuf.pkt.jp_data, &nsipcbuf.pkt.jp_len);
+
 	static envid_t nsenv;
 	if (nsenv == 0)
 		nsenv = ipc_find_env(ENV_TYPE_NS);

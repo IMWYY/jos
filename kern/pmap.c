@@ -593,6 +593,7 @@ mmio_map_region(physaddr_t pa, size_t size)
 	}
 	boot_map_region(kern_pgdir, base, size, pa, PTE_PCD | PTE_PWT | PTE_W);
 	base += size;
+	// cprintf("mmio_map_region: base %08x, size %d \n", base-size, size);
 	return (void *) (base - size);
 }
 

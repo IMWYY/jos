@@ -12,6 +12,7 @@
 #include <kern/console.h>
 #include <kern/sched.h>
 #include <kern/time.h>
+#include <kern/e1000.h>
 
 // Print a string to the system console.
 // The string is exactly 'len' characters long.
@@ -337,12 +338,24 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 	if (!e->env_ipc_recving) return -E_IPC_NOT_RECV;
 
 	if ((uintptr_t)srcva < UTOP) {
-		if ((uintptr_t)srcva % PGSIZE != 0) return -E_INVAL;
-		if ((perm | PTE_SYSCALL) != PTE_SYSCALL) return -E_INVAL;
+		if ((uintptr_t)srcva % PGSIZE != 0) {
+			cprintf("sys_ipc_try_send: not pagesize align \n");
+			return -E_INVAL;
+		}
+		if ((perm | PTE_SYSCALL) != PTE_SYSCALL) {
+			cprintf("sys_ipc_try_send: perm wrong \n");
+			return -E_INVAL;
+		}
 		pte_t *pt;
 		struct PageInfo *pp = page_lookup(curenv->env_pgdir, srcva, &pt);
-		if (!pp) return -E_INVAL;
-		if ((perm & PTE_W) && !(*pt & PTE_W)) return -E_INVAL;
+		if (!pp) {
+			cprintf("sys_ipc_try_send: pp not exist \n");
+			return -E_INVAL;
+		}
+		if ((perm & PTE_W) && !(*pt & PTE_W)) {
+			cprintf("sys_ipc_try_send: pp wrong perm \n");
+			return -E_INVAL;
+		}
 		if (page_insert(e->env_pgdir, pp, e->env_ipc_dstva, perm)) {
 			return -E_NO_MEM;
 		}
@@ -388,8 +401,21 @@ sys_ipc_recv(void *dstva)
 static int
 sys_time_msec(void)
 {
-	// LAB 6: Your code here.
-	panic("sys_time_msec not implemented");
+	return time_msec();
+}
+
+static int 
+sys_net_try_send(void *buf, size_t len) {
+	user_mem_assert(curenv, buf, len, PTE_U | PTE_P);
+	return e1000_transmit(buf, len);
+}
+
+static int 
+sys_net_recv(void *buf, size_t *len) {
+  	// cprintf("e1000_receive curenvid: %d, &buf %08x, &len %08x \n", 
+	//   curenv->env_id, buf, len);
+	user_mem_assert(curenv, len, PGSIZE, PTE_U | PTE_P | PTE_W);
+	return e1000_receive(buf, len);
 }
 
 // Dispatches to the correct kernel function, passing the arguments.
@@ -430,6 +456,12 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 		return sys_ipc_recv((void *)a1);
 	case SYS_env_set_trapframe:
 		return sys_env_set_trapframe(a1, (struct Trapframe*)a2);
+	case SYS_time_msec:
+		return sys_time_msec();
+	case SYS_net_try_send:
+		return sys_net_try_send((void *)a1, a2);
+	case SYS_net_recv:
+		return sys_net_recv((void *)a1, (size_t *)a2);
 	case NSYSCALLS:
 		panic("kern/syscall: NSYSCALLS");
 		return -E_INVAL;

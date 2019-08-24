@@ -4,6 +4,9 @@
         "monitor.h": "c",
         "console.h": "c",
         "error.h": "c",
-        "lib.h": "c"
+        "lib.h": "c",
+        "e1000.h": "c",
+        "ns.h": "c",
+        "syscall.h": "c"
     }
 }
